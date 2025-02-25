@@ -1,13 +1,11 @@
 # mmWave_ROS1_PX4_Gazebo
-Simulate mmWave radar based drone control in Gazebo with ROS2 and PX4
+Simulate mmWave radar based drone control in Gazebo with ROS1 and PX4
 
 ### Prerequisites
 Tested with:
 - Ubuntu 20.04.3 LTS
-- ROS2 Foxy
+- ROS1 Noetic
 - Gazebo 11.9.0
-- px4_ros_com commit 90538d841a383fe9631b7046096f9aa808a43121
-- px4_msgs commit 7f89976091235579633935b7ccaab68b2debbe19
 - PX4 Autopilot commit d7a962b4269d3ca3d2dcae44da7a37177af1d8cd
 
 Specific commits from [pull request #1](https://github.com/nhma20/mmWave_ROS2_PX4_Gazebo/pull/1/commits/3ad006353495266432122e5ec3f595899fedeb08)
