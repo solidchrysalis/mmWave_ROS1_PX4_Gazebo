@@ -1,4 +1,4 @@
-# mmWave_ROS2_PX4_Gazebo
+# mmWave_ROS1_PX4_Gazebo
 Simulate mmWave radar based drone control in Gazebo with ROS2 and PX4
 
 ### Prerequisites
