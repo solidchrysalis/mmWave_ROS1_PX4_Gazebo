@@ -43,125 +43,116 @@
  * of the TrajectorySetpoint message shall change.
  */
 
-#include <px4_msgs/msg/offboard_control_mode.hpp>
-#include <px4_msgs/msg/trajectory_setpoint.hpp>
-#include <px4_msgs/msg/timesync.hpp>
-#include <px4_msgs/msg/vehicle_command.hpp>
-#include <px4_msgs/msg/vehicle_control_mode.hpp>
-#include <px4_msgs/msg/debug_vect.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <stdint.h>
-#include <thread>
-#include <climits>
 
+#include <ros/ros.h>
+#include <publisher.h>
+#include <subscriber.h>
 #include <chrono>
 #include <iostream>
+#include <ros/ros.h>
+#include <px4_msgs/DebugVect.h>
+#include <px4_msgs/OffboardControlMode.h>
+#include <px4_msgs/TrajectorySetpoint.h>
+#include <px4_msgs/VehicleCommand.h>
+#include <px4_msgs/VehicleControlMode.h>
+#include <px4_msgs/Timesync.h>
+#include <atomic>
+#include <thread>
+#include <cmath>
+#include <stdint.h>
+#include <climits>
 
-using namespace std::chrono;
-using namespace std::chrono_literals;
-using namespace px4_msgs::msg;
-
-class OffboardControl : public rclcpp::Node {
+class OffboardControl
+{
 public:
-	OffboardControl() : Node("offboard_control") {
-#ifdef ROS_DEFAULT_API
-		offboard_control_mode_publisher_ =
-			this->create_publisher<OffboardControlMode>("fmu/offboard_control_mode/in", 10);
-		trajectory_setpoint_publisher_ =
-			this->create_publisher<TrajectorySetpoint>("fmu/trajectory_setpoint/in", 10);
-		vehicle_command_publisher_ =
-			this->create_publisher<VehicleCommand>("fmu/vehicle_command/in", 10);
-#else
-		offboard_control_mode_publisher_ =
-			this->create_publisher<OffboardControlMode>("fmu/offboard_control_mode/in");
-		trajectory_setpoint_publisher_ =
-			this->create_publisher<TrajectorySetpoint>("fmu/trajectory_setpoint/in");
-		vehicle_command_publisher_ =
-			this->create_publisher<VehicleCommand>("fmu/vehicle_command/in");
-#endif
-		
-		// get common timestamp
-		timesync_sub_ = this->create_subscription<px4_msgs::msg::Timesync>("/fmu/timesync/out",
-		10,
-		[this](const px4_msgs::msg::Timesync::UniquePtr msg) {
-			timestamp_.store(msg->timestamp);
-		});
+    OffboardControl(ros::NodeHandle &nh) {
+        // Publishers
+        offboard_control_mode_publisher_ = nh.advertise<px4_msgs::OffboardControlMode>("fmu/offboard_control_mode/in", 10);
+        trajectory_setpoint_publisher_ = nh.advertise<px4_msgs::TrajectorySetpoint>("fmu/trajectory_setpoint/in", 10);
+        vehicle_command_publisher_ = nh.advertise<px4_msgs::VehicleCommand>("fmu/vehicle_command/in", 10);
 
-		auto control_callback = [this]() -> void {
-			if (OffboardControl::hasReceivedLaserScanMsgs == true && OffboardControl::armed == false) {
-				RCLCPP_INFO(this->get_logger(),  "Control messages received, attempting takeoff..");
-				// Change to Offboard mode after 10 setpoints
-				this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
-				// Arm the vehicle
-				this->arm();
-			}
-            		// offboard_control_mode needs to be paired with trajectory_setpoint
-			publish_offboard_control_mode();
-			publish_trajectory_setpoint(NAN,NAN,NAN,NAN,NAN, OffboardControl::xv , OffboardControl::yv, OffboardControl::zv);
+        // Subscribers
+        timesync_sub_ = nh.subscribe("/fmu/timesync/out", 10, &OffboardControl::timesyncCallback, this);
+        subscription_ = nh.subscribe("vel_ctrl_vect_topic", 10, &OffboardControl::OnVelVect, this);
 
-			// detect if no messages are received when drone is armed, land if true
-			if(armed == true){
-				if (sensorMsgsCallbacks == sensorMsgsCallbacksPrev) {
-					sensorMsgsCallbacksSamePrev++;
-				} else {
-					sensorMsgsCallbacksSamePrev = 0;
-				}
-				
-				if(sensorMsgsCallbacksSamePrev == 10){
-					RCLCPP_INFO(this->get_logger(),  "Connection to control publisher lost, landing..");
-					this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_NAV_LAND); 
-				}
-				sensorMsgsCallbacksPrev = sensorMsgsCallbacks;
-			}
-		};
-		timer_ = this->create_wall_timer(50ms, control_callback);
+        // Timer
+        timer_ = nh.createTimer(ros::Duration(0.05), &OffboardControl::controlCallback, this);
 
+        ROS_INFO("OffboardControl Node Initialized");
+    }
 
-		subscription_ = this->create_subscription<px4_msgs::msg::DebugVect>(
-			"vel_ctrl_vect_topic",	10,
-			std::bind(&OffboardControl::OnVelVect, this, std::placeholders::_1));
-	}
-	
-	~OffboardControl() {
-		RCLCPP_INFO(this->get_logger(),  "Shutting down offboard control..");
-		publish_vehicle_command(VehicleCommand::VEHICLE_CMD_NAV_LAND); 
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		
-	}
-	
-	void arm();
-	void disarm();
+    ~OffboardControl() {
+        ROS_INFO("Shutting down offboard control...");
+        publish_vehicle_command(px4_msgs::VehicleCommand::VEHICLE_CMD_NAV_LAND);
+        ros::Duration(0.01).sleep();
+    }
+
+    void arm();
+    void disarm();
 
 private:
-	rclcpp::TimerBase::SharedPtr timer_;
-	rclcpp::Subscription<px4_msgs::msg::DebugVect>::SharedPtr subscription_;
-	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
-	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
-	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
-	rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;
+    ros::Timer timer_;
+    ros::Subscriber subscription_;
+    ros::Publisher offboard_control_mode_publisher_;
+    ros::Publisher trajectory_setpoint_publisher_;
+    ros::Publisher vehicle_command_publisher_;
+    ros::Subscriber timesync_sub_;
 
-	std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
-	bool armed = false;
-	float xv = NAN, yv = NAN, zv = NAN;
-	bool hasReceivedLaserScanMsgs = false;
-	int sensorMsgsCallbacks = 0, sensorMsgsCallbacksPrev = 0, sensorMsgsCallbacksSamePrev = 0;
-	void OnVelVect(const px4_msgs::msg::DebugVect::UniquePtr msg);
-	void publish_offboard_control_mode() const;
-	void publish_trajectory_setpoint(float x, float y, float z, float yaw, float yawspeed, float vx, float vy, float vz) const;
-	void publish_vehicle_command(uint16_t command, float param1 = 0.0,
-				     float param2 = 0.0,
-				     float param3 = 0.0,
-				     float param4 = 0.0,
-				     float param5 = 0.0,
-				     float param6 = 0.0,
-				     float param7 = 0.0) const;
+    std::atomic<uint64_t> timestamp_;
+    bool armed = false;
+    float xv = NAN, yv = NAN, zv = NAN;
+    bool hasReceivedLaserScanMsgs = false;
+    int sensorMsgsCallbacks = 0, sensorMsgsCallbacksPrev = 0, sensorMsgsCallbacksSamePrev = 0;
+
+    void OnVelVect(const px4_msgs::DebugVect::ConstPtr& msg);
+    void publish_offboard_control_mode() const;
+    void publish_trajectory_setpoint(float x, float y, float z, float yaw, float yawspeed, float vx, float vy, float vz) const;
+    void publish_vehicle_command(uint16_t command, float param1 = 0.0,
+                                 float param2 = 0.0,
+                                 float param3 = 0.0,
+                                 float param4 = 0.0,
+                                 float param5 = 0.0,
+                                 float param6 = 0.0,
+                                 float param7 = 0.0) const;
+
+    void timesyncCallback(const px4_msgs::Timesync::ConstPtr& msg) {
+        timestamp_.store(msg->timestamp);
+    }
+
+    void controlCallback(const ros::TimerEvent&) {
+        if (hasReceivedLaserScanMsgs && !armed) {
+            ROS_INFO("Control messages received, attempting takeoff...");
+            publish_vehicle_command(px4_msgs::VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
+            arm();
+        }
+
+        // Offboard control mode needs to be paired with trajectory setpoint
+        publish_offboard_control_mode();
+        publish_trajectory_setpoint(NAN, NAN, NAN, NAN, NAN, xv, yv, zv);
+
+        // Detect if no messages are received when drone is armed, land if true
+        if (armed) {
+            if (sensorMsgsCallbacks == sensorMsgsCallbacksPrev) {
+                sensorMsgsCallbacksSamePrev++;
+            } else {
+                sensorMsgsCallbacksSamePrev = 0;
+            }
+
+            if (sensorMsgsCallbacksSamePrev == 10) {
+                ROS_INFO("Connection to control publisher lost, landing...");
+                publish_vehicle_command(px4_msgs::VehicleCommand::VEHICLE_CMD_NAV_LAND);
+            }
+            sensorMsgsCallbacksPrev = sensorMsgsCallbacks;
+        }
+    }
 };
 
+	
 
 /**
  * @brief Control drone velocity based on ROS2 advertiser
  */
-void OffboardControl::OnVelVect(const px4_msgs::msg::DebugVect::UniquePtr msg) {
+void OffboardControl::OnVelVect(const px4_msgs::DebugVect::Ptr msg) {
 	OffboardControl::xv = msg->x;
 	OffboardControl::yv = msg->y;
 	OffboardControl::zv = msg->z;
@@ -257,12 +248,13 @@ void OffboardControl::publish_vehicle_command(uint16_t command, float param1,
 	vehicle_command_publisher_->publish(msg);
 }
 
-int main(int argc, char* argv[]) {
-	std::cout << "Starting offboard control node..." << std::endl;
-	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
-	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<OffboardControl>());
+int main(int argc, char** argv) {
+    std::cout << "Starting offboard control node..." << std::endl;
+    ros::init(argc, argv, "offboard_control");
+    ros::NodeHandle nh;
 
-	rclcpp::shutdown();
-	return 0;
+    OffboardControl offboard_control = OffboardControl(&nh);
+
+    ros::spin();
+    return 0;
 }

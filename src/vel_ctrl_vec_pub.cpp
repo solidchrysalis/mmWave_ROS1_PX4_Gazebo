@@ -1,7 +1,10 @@
-#include <rclcpp/rclcpp.hpp>
-#include <px4_msgs/msg/debug_vect.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/point_field.hpp>
+#include <ros/ros.h>
+#include <publisher.h>
+#include <subscriber.h>
+#include <px4_msgs/DebugVect.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointField.h>
+
 
 #include <algorithm>
 #include <cstdlib>
@@ -17,37 +20,35 @@
 
 using namespace std::chrono_literals;
 
-//creates a VelocityControlVectorAdvertiser class that subclasses the generic rclcpp::Node base class.
-class VelocityControlVectorAdvertiser : public rclcpp::Node
+class VelocityControlVectorAdvertiser
 {
+public:
+    VelocityControlVectorAdvertiser(ros::RosHandle nh&) {
+        // Publisher
+        publisher_ = nh.advertise<px4_msgs::DebugVect>("vel_ctrl_vect_topic", 10);
 
-//Creates a function for when messages are to be sent. 
-//Messages are sent based on a timed callback.
-	public:
-		VelocityControlVectorAdvertiser() : Node("vel_ctrl_vect_advertiser") {
-			publisher_ = this->create_publisher<px4_msgs::msg::DebugVect>("vel_ctrl_vect_topic", 10);
-						
-			lidar_to_mmwave_pcl_subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-			"/lidar_to_mmwave_pcl",	10,
-			std::bind(&VelocityControlVectorAdvertiser::OnDepthMsg, this, std::placeholders::_1));
-			
-		}
+        // Subscriber
+        lidar_to_mmwave_pcl_subscription_ = nh.subscribe(
+            "/lidar_to_mmwave_pcl", 10, &VelocityControlVectorAdvertiser::OnDepthMsg, this);
 
-		~VelocityControlVectorAdvertiser() {
-			RCLCPP_INFO(this->get_logger(),  "Shutting down vel_ctrl_vect_advertiser..");
-		}
+        ROS_INFO("VelocityControlVectorAdvertiser Node Initialized");
+    }
 
+    ~VelocityControlVectorAdvertiser() {
+        ROS_INFO("Shutting down vel_ctrl_vect_advertiser..");
+    }
 
-	private:
-		rclcpp::TimerBase::SharedPtr timer_;
-		rclcpp::Publisher<px4_msgs::msg::DebugVect>::SharedPtr publisher_;
-		rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr lidar_to_mmwave_pcl_subscription_;
+private:
+    ros::Timer timer_;
+    ros::Publisher publisher_;
+    ros::Subscriber lidar_to_mmwave_pcl_subscription_;
 
-		int callback_count = 0;
-		void OnDepthMsg(const sensor_msgs::msg::PointCloud2::SharedPtr _msg);
-		void VelocityDroneControl(float xv, float yv, float zv);
-		float constrain(float val, float lo_lim, float hi_lim);
-		bool beginHover();
+    int callback_count = 0;
+
+    void OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr msg); // might need fix
+    void VelocityDroneControl(float xv, float yv, float zv);
+    float constrain(float val, float lo_lim, float hi_lim);
+    bool beginHover();
 };
 
 
@@ -65,7 +66,7 @@ void VelocityControlVectorAdvertiser::VelocityDroneControl(float xv, float yv, f
 
 
 // mmwave message callback function
-void VelocityControlVectorAdvertiser::OnDepthMsg(const sensor_msgs::msg::PointCloud2::SharedPtr _msg){
+void VelocityControlVectorAdvertiser::OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr _msg){
 
 	// read PointCloud2 msg data
 	int pcl_size = _msg->width;
@@ -109,10 +110,10 @@ void VelocityControlVectorAdvertiser::OnDepthMsg(const sensor_msgs::msg::PointCl
 		shortest_dist_angle_xz = asin(pcl_x.at(closest_dist_idx) / sqrt(pow(pcl_x.at(closest_dist_idx),2) + pow(pcl_z.at(closest_dist_idx),2)));
 		shortest_dist_angle_yz = asin(pcl_y.at(closest_dist_idx) / sqrt(pow(pcl_y.at(closest_dist_idx),2) + pow(pcl_z.at(closest_dist_idx),2)));
 		shortest_dist = closest_dist;
-		RCLCPP_INFO(this->get_logger(),  "\n Dist: %f, \n XZ Angle: %f, \n YX Angle: %f", shortest_dist, shortest_dist_angle_xz, shortest_dist_angle_yz);
+		ros_INFO(this->get_logger(),  "\n Dist: %f, \n XZ Angle: %f, \n YX Angle: %f", shortest_dist, shortest_dist_angle_xz, shortest_dist_angle_yz);
 
 	} else{	
-		RCLCPP_INFO(this->get_logger(),  "\n No points in pointcloud");
+		ros_INFO(this->get_logger(),  "\n No points in pointcloud");
 	}
 
 	auto vel_ctrl_vect = px4_msgs::msg::DebugVect();
@@ -236,9 +237,11 @@ int main(int argc, char *argv[])
 {
 	std::cout << "Starting velocity control vector advertiser node..." << std::endl;
 	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
-	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<VelocityControlVectorAdvertiser>());
+	ros::init(argc, argv);
+	ros::init(argc, argv, "vel_ctrl");
+	ros::NodeHandle nh;
+	VelocityControlVectorAdvertiser vel_ctrl = VelocityControlVectorAdvertiser(&nh);
+	ros::spin();
 
-	rclcpp::shutdown();
 	return 0;
 }

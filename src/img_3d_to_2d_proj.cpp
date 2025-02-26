@@ -1,7 +1,9 @@
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/point_field.hpp>
+#include <ros/ros.h>
+#include <publisher.h>
+#include <subscriber.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointField.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -17,48 +19,50 @@
 
 using namespace std::chrono_literals;
 
-//creates a DepthToImageProjection class that subclasses the generic rclcpp::Node base class.
-class DepthToImageProjection : public rclcpp::Node
+//creates a DepthToImageProjection class that subclasses the generic ROS::Node base class.
+c#include <ros/ros.h>
+
+class DepthToImageProjection
 {
+public:
+    DepthToImageProjection(ros::NodeHandle &nh) {
+        // Publisher
+        proj_img_publisher_ = nh.advertise<sensor_msgs::Image>("img_3d_to_2d_proj", 10);
 
-//Creates a function for when messages are to be sent. 
-//Messages are sent based on a timed callback.
-	public:
-		DepthToImageProjection() : Node("img_3d_to_2d_projection") {
-			proj_img_publisher_ = this->create_publisher<sensor_msgs::msg::Image>("img_3d_to_2d_proj", 10);
-						
-			lidar_to_mmwave_pcl_subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-			"/lidar_to_mmwave_pcl",	10,
-			std::bind(&DepthToImageProjection::OnDepthMsg, this, std::placeholders::_1));
+        // Subscribers
+        lidar_to_mmwave_pcl_subscription_ = nh.subscribe(
+            "/lidar_to_mmwave_pcl", 10, &DepthToImageProjection::OnDepthMsg, this);
 
-			camera_subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-			"/cable_camera/image_raw",	10,
-			std::bind(&DepthToImageProjection::OnCameraMsg, this, std::placeholders::_1));
-		}
+        camera_subscription_ = nh.subscribe(
+            "/cable_camera/image_raw", 10, &DepthToImageProjection::OnCameraMsg, this);
+        
+        ROS_INFO("DepthToImageProjection Node Initialized");
+    }
 
-		~DepthToImageProjection() {
-			RCLCPP_INFO(this->get_logger(),  "Shutting down img_3d_to_2d_projection..");
-		}
+    ~DepthToImageProjection() {
+        ROS_INFO("Shutting down img_3d_to_2d_projection..");
+    }
 
-	private:
-		rclcpp::TimerBase::SharedPtr timer_;
-		rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr proj_img_publisher_;
-		rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr camera_subscription_;
-		rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr lidar_to_mmwave_pcl_subscription_;
+private:
+    ros::NodeHandle nh;
+    ros::Publisher proj_img_publisher_;
+    ros::Subscriber camera_subscription_;
+    ros::Subscriber lidar_to_mmwave_pcl_subscription_;
 
-		std::vector<float> objects_dists;
-		std::vector<float> objects_xz_angle;
-		std::vector<float> objects_yz_angle;
-		int closest_idx;
+    std::vector<float> objects_dists;
+    std::vector<float> objects_xz_angle;
+    std::vector<float> objects_yz_angle;
+    int closest_idx;
 
-		void OnDepthMsg(const sensor_msgs::msg::PointCloud2::SharedPtr _msg);
-		void OnCameraMsg(const sensor_msgs::msg::Image::SharedPtr _msg);
+    void OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void OnCameraMsg(const sensor_msgs::Image::ConstPtr& msg);
 };
 
 
 
+
 // mmwave message callback function
-void DepthToImageProjection::OnDepthMsg(const sensor_msgs::msg::PointCloud2::SharedPtr _msg){
+void DepthToImageProjection::OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr& _msg){
 	// read PointCloud2 msg data
 	int pcl_size = _msg->width;
 	uint8_t *ptr = _msg->data.data();
@@ -103,7 +107,7 @@ void DepthToImageProjection::OnDepthMsg(const sensor_msgs::msg::PointCloud2::Sha
 
 
 // calculate pixel coordinates for 3d->2d projection
-void DepthToImageProjection::OnCameraMsg(const sensor_msgs::msg::Image::SharedPtr _msg){
+void DepthToImageProjection::OnCameraMsg(const sensor_msgs::Image::ConstPtr& _msg){
 	float img_hfov = 1.3962634016;
 	float h_focal_length = (_msg->width * 0.5) / tan(img_hfov * 0.5 ); // in pixels
 	// find horisontal and vertical pixel where nearest object would be
@@ -132,10 +136,10 @@ void DepthToImageProjection::OnCameraMsg(const sensor_msgs::msg::Image::SharedPt
 	}
 	if (this->objects_dists.size() > 0)
 	{
-		RCLCPP_INFO(this->get_logger(),  "\n Shortest dist pixel: \n x_px: %f, \n y_px: %f", x_px_vec.at(this->closest_idx), y_px_vec.at(this->closest_idx));
+		ROS_INFO(this->get_logger(),  "\n Shortest dist pixel: \n x_px: %f, \n y_px: %f", x_px_vec.at(this->closest_idx), y_px_vec.at(this->closest_idx));
 	}
 	else {
-		RCLCPP_INFO(this->get_logger(),  "\n No points in pointcloud");
+		ROS_INFO(this->get_logger(),  "\n No points in pointcloud");
 
 	}
 	
@@ -188,11 +192,13 @@ void DepthToImageProjection::OnCameraMsg(const sensor_msgs::msg::Image::SharedPt
 			
 int main(int argc, char *argv[])
 {
-	std::cout << "Starting DepthToImageProjection node..." << std::endl;
+	std::cout << "Starting depth_to_image_projections node..." << std::endl;
 	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
-	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<DepthToImageProjection>());
-
-	rclcpp::shutdown();
+	ros::init(argc, argv, "depth_to_image_projections");
+	ros::NodeHandle nh;
+	DepthToImageProjection dtip = DepthToImageProjection(&nh);
+	ros::spin();
 	return 0;
 }
+
+

@@ -1,7 +1,10 @@
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/point_field.hpp>
+#include <ros/ros.h>
+#include <publisher.h>
+#include <subscriber.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointField.h>
+
 
 #include <algorithm>
 #include <cstdlib>
@@ -17,30 +20,27 @@
 
 using namespace std::chrono_literals;
 
-//creates a LidarToMmwave class that subclasses the generic rclcpp::Node base class.
-class LidarToMmwave : public rclcpp::Node
+//creates a LidarToMmwave class that subclasses the generic ros::Node base class.
+class LidarToMmwave 
 {
 
 //Creates a function for when messages are to be sent. 
 //Messages are sent based on a timed callback.
 	public:
-		LidarToMmwave() : Node("lidar_to_mmwave_converter") {
-			lidar_to_mmwave_pcl_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/lidar_to_mmwave_pcl", 10);
-
-			subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-			"/dist_sensor/laser_scan",	10,
-			std::bind(&LidarToMmwave::lidar_to_mmwave_pcl, this, std::placeholders::_1));
-		}
+		LidarToMmwave(ros::NodeHandle &nh) {
+		lidar_to_mmwave_pcl_publisher_ = nh.advertise<sensor_msgs::PointCloud2>("/lidar_to_mmwave_pcl", 10);
+        	subscription_ = nh.subscribe("/dist_sensor/laser_scan", 10, &LidarToMmwave::lidar_to_mmwave_pcl, this);
+        	}
 
 		~LidarToMmwave() {
-			RCLCPP_INFO(this->get_logger(),  "Shutting down lidar_to_mmwave_converter..");
+			ROS_INFO("Shutting down lidar_to_mmwave_converter..");
 		}
 
 
 	private:
-		rclcpp::TimerBase::SharedPtr timer_;
-		rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr lidar_to_mmwave_pcl_publisher_;
-		rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
+		ros::Timer timer_;
+		ros::Publisher lidar_to_mmwave_pcl_publisher_;
+		ros::Subscription subscription_;
 
 		std::vector<float> objects_dist;
 		std::vector<float> objects_angl;
@@ -50,7 +50,7 @@ class LidarToMmwave : public rclcpp::Node
 
 
 // converts lidar data to pointcloud of detected objects to simulate sparse mmwave
-void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::msg::LaserScan::SharedPtr _msg){
+void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& _msg){
 	float angle_increment = _msg->angle_increment;
 	float angle_min = _msg->angle_min;
 	float angle_max = _msg->angle_max;
@@ -185,9 +185,9 @@ int main(int argc, char *argv[])
 {
 	std::cout << "Starting lidar_to_mmwave_converter node..." << std::endl;
 	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
-	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<LidarToMmwave>());
-
-	rclcpp::shutdown();
+	ros::init(argc, argv, "lidar_to_mmwave");
+	ros::NodeHandle nh;
+	LidarToMmwave ltm = LidarToMmwave(&nh);
+	ros::spin();
 	return 0;
 }
