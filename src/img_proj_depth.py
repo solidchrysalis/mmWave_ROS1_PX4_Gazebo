@@ -1,32 +1,26 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-import std_msgs.msg
+import rospy
 from std_msgs.msg import Float32
-from std_msgs.msg import Header
 from sensor_msgs.msg import Image
+from std_msgs.msg import Header
 import cv2 as cv
 import numpy as np
-import copy
-import matplotlib.pyplot as plt
+from cv_bridge import CvBridge
 
-
-class ImageProjectDepthNode(Node):
+class ImageProjectDepthNode():
 	def __init__(self):
 		super().__init__("img_proj_depth")
 
 		self.horisontal_pixel = 0
 
-		self.altered_img_publisher_ = self.create_publisher(
-		Image, "/cable_camera/img_proj_depth", 10)
+		self.altered_img_publisher_ = rospy.Publisher(
+		"/cable_camera/img_proj_depth", Image, queue_size=10)
 
-		self.horisontal_pixel_subscription_ = self.create_subscription(
-		Float32, '/horisontal_cable_pixel', self.pixel_val_callback, 10)
-		self.horisontal_pixel_subscription_   
+		self.horisontal_pixel_subscription_ = rospy.Subscriber(
+	    '/horisontal_cable_pixel', Float32, self.pixel_val_callback)
 
-		self.cable_cam_img_subscription_ = self.create_subscription(
-		Image, '/cable_camera/image_raw', self.img_msg_callback, 10)
-		self.cable_cam_img_subscription_           
+		self.cable_cam_img_subscription_ = rospy.Subscriber(
+		'/cable_camera/image_raw', Image, self.img_msg_callback)     
 
 	def pixel_val_callback(self, msg):
 		self.horisontal_pixel = msg.data # 1D list of 6220800 elements (1920 x 1080 x 3)	
@@ -60,7 +54,7 @@ class ImageProjectDepthNode(Node):
 
 
 		img_pub_msg = Image()
-		img_pub_msg.header = std_msgs.msg.Header()
+		img_pub_msg.header = Header()
 		img_pub_msg.header.stamp = self.get_clock().now().to_msg()
 		img_pub_msg.header.frame_id = 'map'
 		img_pub_msg.height = msg.height
@@ -71,11 +65,11 @@ class ImageProjectDepthNode(Node):
 		img_pub_msg.data = msg.data#flat_img#img_copy
 		self.altered_img_publisher_.publish(img_pub_msg)
 
-def main(args=None):
-    rclpy.init(args=args)
+
+def main():
     node = ImageProjectDepthNode()
-    rclpy.spin(node)
-    rclpy.shutdown()
-    
+    rospy.spin()
+
 if __name__ == "__main__":
     main()
+

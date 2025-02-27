@@ -47,15 +47,14 @@
 #include <ros/ros.h>
 #include <publisher.h>
 #include <subscriber.h>
-#include <chrono>
-#include <iostream>
-#include <ros/ros.h>
 #include <px4_msgs/DebugVect.h>
 #include <px4_msgs/OffboardControlMode.h>
 #include <px4_msgs/TrajectorySetpoint.h>
 #include <px4_msgs/VehicleCommand.h>
 #include <px4_msgs/VehicleControlMode.h>
 #include <px4_msgs/Timesync.h>
+#include <chrono>
+#include <iostream>
 #include <atomic>
 #include <thread>
 #include <cmath>

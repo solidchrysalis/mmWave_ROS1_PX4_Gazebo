@@ -20,7 +20,6 @@
 using namespace std::chrono_literals;
 
 //creates a DepthToImageProjection class that subclasses the generic ROS::Node base class.
-c#include <ros/ros.h>
 
 class DepthToImageProjection
 {

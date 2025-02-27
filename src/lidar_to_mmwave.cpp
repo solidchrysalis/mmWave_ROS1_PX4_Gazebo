@@ -20,7 +20,6 @@
 
 using namespace std::chrono_literals;
 
-//creates a LidarToMmwave class that subclasses the generic ros::Node base class.
 class LidarToMmwave 
 {
 
@@ -44,7 +43,7 @@ class LidarToMmwave
 
 		std::vector<float> objects_dist;
 		std::vector<float> objects_angl;
-		void lidar_to_mmwave_pcl(const sensor_msgs::msg::LaserScan::SharedPtr _msg);
+		void lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr _msg);
 };
 
 
@@ -143,15 +142,15 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 	pcl2_msg.fields.resize(3);
 	pcl2_msg.fields[0].name = 'x';
 	pcl2_msg.fields[0].offset = 0;
-	pcl2_msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
+	pcl2_msg.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
 	pcl2_msg.fields[0].count = 1;
 	pcl2_msg.fields[1].name = 'y';
 	pcl2_msg.fields[1].offset = 4;
-	pcl2_msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
+	pcl2_msg.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
 	pcl2_msg.fields[1].count = 1;
 	pcl2_msg.fields[2].name = 'z';
 	pcl2_msg.fields[2].offset = 8;
-	pcl2_msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
+	pcl2_msg.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
 	pcl2_msg.fields[2].count = 1;
 	const uint32_t POINT_STEP = 12;
 	if(objects_dist.size() > 0){

@@ -45,7 +45,7 @@ private:
 
     int callback_count = 0;
 
-    void OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr msg); // might need fix
+    void OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr& msg); // might need fix
     void VelocityDroneControl(float xv, float yv, float zv);
     float constrain(float val, float lo_lim, float hi_lim);
     bool beginHover();
@@ -66,7 +66,7 @@ void VelocityControlVectorAdvertiser::VelocityDroneControl(float xv, float yv, f
 
 
 // mmwave message callback function
-void VelocityControlVectorAdvertiser::OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr _msg){
+void VelocityControlVectorAdvertiser::OnDepthMsg(const sensor_msgs::PointCloud2::ConstPtr& _msg){
 
 	// read PointCloud2 msg data
 	int pcl_size = _msg->width;
