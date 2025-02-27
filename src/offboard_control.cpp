@@ -66,9 +66,9 @@ class OffboardControl
 public:
     OffboardControl(ros::NodeHandle &nh) {
         // Publishers
-        offboard_control_mode_publisher_ = nh.advertise<px4_msgs::OffboardControlMode>("fmu/offboard_control_mode/in", 10);
-        trajectory_setpoint_publisher_ = nh.advertise<px4_msgs::TrajectorySetpoint>("fmu/trajectory_setpoint/in", 10);
-        vehicle_command_publisher_ = nh.advertise<px4_msgs::VehicleCommand>("fmu/vehicle_command/in", 10);
+        offboard_control_mode_publisher_ = nh->advertise<px4_msgs::OffboardControlMode>("fmu/offboard_control_mode/in", 10);
+        trajectory_setpoint_publisher_ = nh->advertise<px4_msgs::TrajectorySetpoint>("fmu/trajectory_setpoint/in", 10);
+        vehicle_command_publisher_ = nh->advertise<px4_msgs::VehicleCommand>("fmu/vehicle_command/in", 10);
 
         // Subscribers
         timesync_sub_ = nh.subscribe("/fmu/timesync/out", 10, &OffboardControl::timesyncCallback, this);

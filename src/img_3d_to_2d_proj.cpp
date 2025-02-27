@@ -26,13 +26,13 @@ class DepthToImageProjection
 public:
     DepthToImageProjection(ros::NodeHandle &nh) {
         // Publisher
-        proj_img_publisher_ = nh.advertise<sensor_msgs::Image>("img_3d_to_2d_proj", 10);
+        proj_img_publisher_ = nh->advertise<sensor_msgs::Image>("img_3d_to_2d_proj", 10);
 
         // Subscribers
-        lidar_to_mmwave_pcl_subscription_ = nh.subscribe(
+        lidar_to_mmwave_pcl_subscription_ = nh->subscribe(
             "/lidar_to_mmwave_pcl", 10, &DepthToImageProjection::OnDepthMsg, this);
 
-        camera_subscription_ = nh.subscribe(
+        camera_subscription_ = nh->subscribe(
             "/cable_camera/image_raw", 10, &DepthToImageProjection::OnCameraMsg, this);
         
         ROS_INFO("DepthToImageProjection Node Initialized");

@@ -5,7 +5,6 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
 
-
 #include <algorithm>
 #include <cstdlib>
 #include <stdlib.h> 
@@ -25,10 +24,10 @@ class VelocityControlVectorAdvertiser
 public:
     VelocityControlVectorAdvertiser(ros::RosHandle nh&) {
         // Publisher
-        publisher_ = nh.advertise<px4_msgs::DebugVect>("vel_ctrl_vect_topic", 10);
+        publisher_ = nh->advertise<px4_msgs::DebugVect>("vel_ctrl_vect_topic", 10);
 
         // Subscriber
-        lidar_to_mmwave_pcl_subscription_ = nh.subscribe(
+        lidar_to_mmwave_pcl_subscription_ = nh->subscribe(
             "/lidar_to_mmwave_pcl", 10, &VelocityControlVectorAdvertiser::OnDepthMsg, this);
 
         ROS_INFO("VelocityControlVectorAdvertiser Node Initialized");
