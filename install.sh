@@ -11,13 +11,17 @@ fi
 
 
 if [[ "$2" == "" ]]; then
-  echo "USAGE: ./install.sh /path/to/PX4-Autopilot_root /path/to/px4_ros_com_ros2_root."
+  echo "USAGE: ./install.sh /path/to/PX4-Autopilot_root /path/to/ros_catkin_ws."
   exit
 fi
 
 echo "installing CMake files.."
-cp -f $CWD/cmake/CMakeLists.txt $PX4ROSDIR/src/px4_ros_com/
-cp -f $CWD/cmake/sitl_target.cmake $PX4FIRMDIR/platforms/posix/cmake/
+if [ -d "$PX4ROSDIR/src/lidar_to_mmwave_pkg" ]; then
+	echo "Directory exists."
+else 
+	mkdir $PX4ROSDIR/src/lidar_to_mmwave_pkg
+cp -f $CWD/cmake/CMakeLists.txt $PX4ROSDIR/src/lidar_to_mmwave_pkg/
+cp -f $CWD/cmake/sitl_target_sim.cmake $PX4FIRMDIR/platforms/posix/cmake/
 
 
 if [ ! -d "$CWD/hca_models_and_worlds" ] 
