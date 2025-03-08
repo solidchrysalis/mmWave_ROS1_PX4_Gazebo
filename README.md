@@ -68,7 +68,7 @@ source /devel/setup.bash
 ```
 - Add to mavros_posix_sitl.launch at/near the bottom of the file
 ```sh
-<include file="$(find mmWave_ROS1)/launch/main.launch"/>
+<include file="$(find mmWave_ROS1_PX4_Gazebo)/launch/main.launch"/>
 ```
 
 ### Install QGroundControl
