@@ -1,6 +1,6 @@
 #include <ros/ros.h>
-#include <publisher.h>
-#include <subscriber.h>
+#include <ros/publisher.h>
+#include <ros/subscriber.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
@@ -24,7 +24,7 @@ using namespace std::chrono_literals;
 class DepthToImageProjection
 {
 public:
-    DepthToImageProjection(ros::NodeHandle &nh) {
+    DepthToImageProjection(ros::NodeHandle *nh) {
         // Publisher
         proj_img_publisher_ = nh->advertise<sensor_msgs::Image>("img_3d_to_2d_proj", 10);
 

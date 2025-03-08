@@ -22,7 +22,7 @@ using namespace std::chrono_literals;
 class VelocityControlVectorAdvertiser
 {
 public:
-    VelocityControlVectorAdvertiser(ros::RosHandle nh&) {
+    VelocityControlVectorAdvertiser(ros::RosHandle *nh) {
         // Publisher
         publisher_ = nh->advertise<px4_msgs::DebugVect>("vel_ctrl_vect_topic", 10);
 
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 	ros::init(argc, argv);
 	ros::init(argc, argv, "vel_ctrl");
 	ros::NodeHandle nh;
-	VelocityControlVectorAdvertiser vel_ctrl = VelocityControlVectorAdvertiser(&nh);
+	VelocityControlVectorAdvertiser vel_ctrl = VelocityControlVectorAdvertiser(*nh);
 	ros::spin();
 
 	return 0;

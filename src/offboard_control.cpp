@@ -45,8 +45,8 @@
 
 
 #include <ros/ros.h>
-#include <publisher.h>
-#include <subscriber.h>
+#include <ros/publisher.h>
+#include <ros/subscriber.h>
 #include <px4_msgs/DebugVect.h>
 #include <px4_msgs/OffboardControlMode.h>
 #include <px4_msgs/TrajectorySetpoint.h>

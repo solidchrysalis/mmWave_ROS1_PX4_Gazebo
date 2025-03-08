@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include <ros/publisher.h>
+#include <ros/subscriber.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
@@ -131,9 +133,9 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 
 	// create PointCloud2 msg
 	//https://github.com/ros-drivers/velodyne/blob/master/velodyne_laserscan/tests/system.cpp
-	auto pcl2_msg = sensor_msgs::msg::PointCloud2();
-	pcl2_msg.header = std_msgs::msg::Header();
-	pcl2_msg.header.stamp = this->now();
+	auto pcl2_msg = sensor_msgs::PointCloud2();
+	pcl2_msg.header = std_msgs::Header();
+	pcl2_msg.header.stamp = ros::Time::now();
 	std::string frameID = "map";
 	pcl2_msg.header.frame_id = frameID;
 	pcl2_msg.fields.resize(3);
@@ -171,7 +173,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 		}
 	}
 	// publish PointCloud2 msg
-	this->lidar_to_mmwave_pcl_publisher_->publish(pcl2_msg);
+	this->lidar_to_mmwave_pcl_publisher_.publish(pcl2_msg);
 }
 
 			
