@@ -41,6 +41,11 @@ sudo apt install ros-noetic-gazebo-ros-pkgs
 ```sh
 sudo apt install ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavlink 
 ```
+- Install GeographicLib
+```sh
+wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
+sudo bash ./install_geographiclib_datasets.sh   
+```
 
 ### Install PX4 (ROS2, RTPS, SITL, Gazebo)
 - Download PX4 Source code, change to ROS1 and run ```ubuntu.sh``` with no arguments:
@@ -62,10 +67,6 @@ cd ..
 catkin_make
 source /devel/setup.bash
 ```
-- Copy and build this package
-```sh
-./install.sh
-```
 - Add to mavros_posix_sitl.launch at/near the bottom of the file
 ```sh
 <include file="$(find mmWave_ROS1_PX4_Gazebo)/launch/main.launch"/>
@@ -84,19 +85,7 @@ cd ~/Downloads/
 chmod +x ./QGroundControl.AppImage
 ./QGroundControl.AppImage  (or double click)
    ```
-   
-### Install repository files
-The script builds ROS2 workspace and downloads and installs powerline test setup worlds and models from:
-`https://drive.google.com/file/d/1wMf4hJXjVBkhR41Do0fGaT0t_GC8mKW_`. If downloading within the script fails, download from this link manually and install files where the script would.
 
-```sh
-cd ~/mmWave_ROS1_PX4_Gazebo/
-chmod +x ./install.sh
-```
-Execute install script (from the script directory). If PX4 and px4_ros_com_ros2 installed in home directory:
-```
-./install.sh ~/PX4-Autopilot/ ~/px4_ros_com_ros2/
-```
 
 ### Test if all works
 (https://docs.px4.io/master/en/ros/ros2_comm.html#sanity-check-the-installation)
