@@ -1,3 +1,0 @@
-CATKIN_DIR=$1
-
-

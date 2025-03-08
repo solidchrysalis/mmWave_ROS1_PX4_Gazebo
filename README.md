@@ -16,8 +16,8 @@ https://docs.ros.org/en/foxy/Installation.html or https://docs.ros.org/en/foxy/I
 - Setup Sources:
 ```sh
 sudo apt update && sudo apt install curl gnupg2 lsb-release
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 ```
 - Install ROS 1 packages:
 ```sh
@@ -48,7 +48,7 @@ sudo apt install ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavlink
 cd ~
 git clone -n https://github.com/PX4/PX4-Autopilot.git
 cd PX4-Autopilot/
-git checkout 1.13
+git checkout release/1.13
 git submodule update --init --recursive
 bash ./Tools/setup/ubuntu.sh
 ```
