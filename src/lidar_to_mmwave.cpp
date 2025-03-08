@@ -3,7 +3,6 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
 
-
 #include <algorithm>
 #include <cstdlib>
 #include <stdlib.h> 
@@ -24,7 +23,7 @@ class LidarToMmwave
 //Creates a function for when messages are to be sent. 
 //Messages are sent based on a timed callback.
 	public:
-		LidarToMmwave(ros::NodeHandle &nh) {
+		LidarToMmwave(ros::NodeHandle *nh) {
 			lidar_to_mmwave_pcl_publisher_ = nh->advertise<sensor_msgs::PointCloud2>("/lidar_to_mmwave_pcl", 10);
         	subscription_ = nh->subscribe("/dist_sensor/laser_scan", 10, &LidarToMmwave::lidar_to_mmwave_pcl, this);
         }
@@ -37,11 +36,11 @@ class LidarToMmwave
 	private:
 		ros::Timer timer_;
 		ros::Publisher lidar_to_mmwave_pcl_publisher_;
-		ros::Subscription subscription_;
+		ros::Subscriber subscription_;
 
 		std::vector<float> objects_dist;
 		std::vector<float> objects_angl;
-		void lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr _msg);
+		void lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& _msg);
 };
 
 
