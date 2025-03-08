@@ -37,7 +37,7 @@ class LidarToMmwave
 	private:
 		ros::Timer timer_;
 		ros::Publisher lidar_to_mmwave_pcl_publisher_;
-		ros::Subscription subscription_;
+		ros::Subscriber subscription_;
 
 		std::vector<float> objects_dist;
 		std::vector<float> objects_angl;
