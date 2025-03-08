@@ -27,7 +27,7 @@ class LidarToMmwave
 	public:
 		LidarToMmwave(ros::NodeHandle *nh) {
 			lidar_to_mmwave_pcl_publisher_ = nh->advertise<sensor_msgs::PointCloud2>("/lidar_to_mmwave_pcl", 10);
-        	subscription_ = nh->subscribe("/dist_sensor/laser_scan", 10, &LidarToMmwave::lidar_to_mmwave_pcl, this);
+        	subscription_ = nh->subscribe("/laser/scan", 10, &LidarToMmwave::lidar_to_mmwave_pcl, this);
         }
 
 		~LidarToMmwave() {

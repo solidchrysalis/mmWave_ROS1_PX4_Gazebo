@@ -47,7 +47,7 @@ wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/inst
 sudo bash ./install_geographiclib_datasets.sh   
 ```
 
-### Install PX4 (ROS2, RTPS, SITL, Gazebo)
+### Install PX4 (ROS, SITL, Gazebo)
 - Download PX4 Source code, change to ROS1 and run ```ubuntu.sh``` with no arguments:
 ```sh
 cd ~
@@ -66,10 +66,27 @@ mkdir -p ~/catkin_ws/src
 cd ..
 catkin_make
 source /devel/setup.bash
+
 ```
-- Add to mavros_posix_sitl.launch at/near the bottom of the file
+
+### Modify Drone to Include Lidar Plugin
+
+- Enable distance sensor in mavros - comment out distance sensor and rangefinder
 ```sh
-<include file="$(find mmWave_ROS1_PX4_Gazebo)/launch/main.launch"/>
+sudo vim /opt/ros/noetic/mavros/launch/px4_pluginlists.yaml
+```
+- Add LaserScan plugin to lidar in gazebo
+```sh
+cd (PX4_DIR)/Tools/sitl_gazebo/models/lidar
+vi model.sdf
+
+# Add underneath LaserPlugin
+<plugin name="TrueLaser" filename="libgazebo_ros_laser.so">
+     <robotNamespace></robotNamespace>
+          <topicName>/laser/scan</topicName>
+          <frameName>/lidar_sensor_link</frameName>
+</plugin>
+
 ```
 
 ### Install QGroundControl
@@ -89,12 +106,9 @@ chmod +x ./QGroundControl.AppImage
 
 ### Test if all works
 (https://docs.px4.io/master/en/ros/ros2_comm.html#sanity-check-the-installation)
-1. Open a new terminal in the root of the PX4 Autopilot project, and then start a PX4 Gazebo simulation using:
+1. Open a new terminal in the root of the PX4 Autopilot project:
    ```sh
    cd ~/PX4-Autopilot/
-   ```
-   ```sh
-   make px4_sitl_default gazebo_iris
    ```
    
    (syntax: ```make <target> <simulator>_<vehiclemodel>__<world> ```
@@ -103,23 +117,27 @@ chmod +x ./QGroundControl.AppImage
 
    Should make and open PX4 in same console, as well as a Gazebo window with chosen model and world
   
-2. On a new terminal, source the ROS 2 workspace and then start the micrortps_agent daemon with UDP as the transport protocol:
+2. On a new terminal, start MAVROS:
    ```sh 
-   source ~/px4_ros_com_ros2/install/setup.bash
-   micrortps_agent -t UDP
+   source /opt/ros/noetic/setup.bash
+   roslaunch mavros px4.launch fcu_url:="udp://:14540@127.0.0.1:14557"
    ```
   
-3. On the original terminal (PX4 console) start the micrortps_client daemon with UDP:
+3. On the original terminal start the PX4 Simulation:
    ```sh
-   pxh> micrortps_client start -t UDP
+   DONT_RUN=1 make px4_sitl_default gazebo-classic
+   source ~/catkin_ws/devel/setup.bash    # (optional)
+   source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default
+   export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd)
+   export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd)/Tools/simulation/gazebo-classic/sitl_gazebo-classic
+   roslaunch px4 posix_sitl.launch
    ```
-   (may already be running if following message is generated: ```INFO  [micrortps_client] Already running
-Command 'micrortps_client' failed, returned -1.```)
   
-4. Open a new terminal and start a "listener" using the provided launch file:
+4. Open a new terminal and start a mmWave converter using the provided launch file:
    ```sh 
-   source ~/px4_ros_com_ros2/install/setup.bash
-   ros2 launch px4_ros_com sensor_combined_listener.launch.py
+   source /opt/ros/noetic/setup.bash
+   source ~/catkin_ws/devel/setup.bash
+   roslaunch mmWave_ROS1_PX4_Gazebo main.launch
    ```
    
 5. Optionally, open QGroundControl which will connect with PX4. From here it is possible to set waypoints and execute missions.
