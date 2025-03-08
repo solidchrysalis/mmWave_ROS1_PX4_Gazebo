@@ -1,0 +1,10 @@
+
+<launch>
+        <!-- Publish diagnostics information from low-level MCU outputs -->
+        <node pkg="mmWave_ROS1" name="lidar_to_mmwave.cpp" type="diagnostics_publisher" />
+
+        <!-- Publish wheel odometry from MCU encoder data -->
+        <node pkg="mmWave_ROS1" name="img_3d_to_2d_proj.cpp" type="basic_odom_publisher"/>
+
+        <node pkg="mmWave_ROS1" name="vel_ctrl_vec_pub.cpp" type="basic_odom_publisher"/>
+</launch>

@@ -27,9 +27,9 @@ class LidarToMmwave
 //Messages are sent based on a timed callback.
 	public:
 		LidarToMmwave(ros::NodeHandle &nh) {
-		lidar_to_mmwave_pcl_publisher_ = nh->advertise<sensor_msgs::PointCloud2>("/lidar_to_mmwave_pcl", 10);
+			lidar_to_mmwave_pcl_publisher_ = nh->advertise<sensor_msgs::PointCloud2>("/lidar_to_mmwave_pcl", 10);
         	subscription_ = nh->subscribe("/dist_sensor/laser_scan", 10, &LidarToMmwave::lidar_to_mmwave_pcl, this);
-        	}
+        }
 
 		~LidarToMmwave() {
 			ROS_INFO("Shutting down lidar_to_mmwave_converter..");
@@ -177,8 +177,6 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 	this->lidar_to_mmwave_pcl_publisher_->publish(pcl2_msg);
 }
 
-
-	
 			
 int main(int argc, char *argv[])
 {

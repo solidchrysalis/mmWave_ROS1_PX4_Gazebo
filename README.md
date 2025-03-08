@@ -19,11 +19,10 @@ sudo apt update && sudo apt install curl gnupg2 lsb-release
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key  -o /usr/share/keyrings/ros-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 ```
-- Install ROS 2 packages:
+- Install ROS 1 packages:
 ```sh
 sudo apt update
-sudo apt install ros-foxy-desktop
-sudo apt install python3-colcon-common-extensions
+sudo apt install ros-noetic-desktop
 ```
 
 
@@ -36,80 +35,41 @@ curl -sSL http://get.gazebosim.org | sh
 ```
 - Install gazebo_ros_pkgs
 ```sh
-sudo apt install ros-foxy-gazebo-ros-pkgs
+sudo apt install ros-noetic-gazebo-ros-pkgs
 ```
-Install gazebo ROS2 package:
+- Install gazebo MAVROS packages
 ```sh
-sudo apt install ros-foxy-gazebo-ros-pkgs
+sudo apt install ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavlink 
 ```
 
 ### Install PX4 (ROS2, RTPS, SITL, Gazebo)
-https://docs.px4.io/master/en/ros/ros2_comm.html
-- Foonathan memory:
-```sh
-cd ~
-git clone https://github.com/eProsima/foonathan_memory_vendor.git
-cd foonathan_memory_vendor
-mkdir build && cd build
-cmake ..
-sudo cmake --build . --target install
-```
-- Fast-RTPS (DDS)
-```sh
-cd ~
-git clone --recursive https://github.com/eProsima/Fast-DDS.git -b v2.0.0 ~/FastDDS-2.0.0
-cd ~/FastDDS-2.0.0
-mkdir build && cd build
-cmake -DTHIRDPARTY=ON -DSECURITY=ON ..
-make -j$(nproc --all)
-sudo make install
-```
-- Fast-RTPS-Gen
-```sh
-cd ~
-git clone --recursive https://github.com/eProsima/Fast-DDS-Gen.git -b v1.0.4 ~/Fast-RTPS-Gen \
-    && cd ~/Fast-RTPS-Gen \
-    && ./gradlew assemble \
-    && sudo ./gradlew install
-```
-- Check install with ```which fastrtpsgen```
-- Download PX4 Source code and run ```ubuntu.sh``` with no arguments:
+- Download PX4 Source code, change to ROS1 and run ```ubuntu.sh``` with no arguments:
 ```sh
 cd ~
 git clone -n https://github.com/PX4/PX4-Autopilot.git
 cd PX4-Autopilot/
-git checkout d7a962b4269d3ca3d2dcae44da7a37177af1d8cd
+git checkout 1.13
 git submodule update --init --recursive
 bash ./Tools/setup/ubuntu.sh
 ```
 - Relogin or reboot computer before attempting to build NuttX targets
-- Setup ROS 2 Workspace
+- Setup ROS 1 Workspace (**if needed**)
 ```sh
 cd ~
-mkdir -p ~/px4_ros_com_ros2/src
-```
-- Clone ROS 2 bridge packages ```px4_ros_com``` ```px4_msgs```
-```sh
-~/px4_ros_com_ros2/src
-git clone -n https://github.com/PX4/px4_ros_com.git
-cd px4_ros_com/
-git checkout 90538d841a383fe9631b7046096f9aa808a43121
+source /opt/ros/noetic/setup.bash
+mkdir -p ~/catkin_ws/src
 cd ..
-git clone -n https://github.com/PX4/px4_msgs.git
-cd px4_msgs/
-git checkout 7f89976091235579633935b7ccaab68b2debbe19
+catkin_make
+source /devel/setup.bash
 ```
-- Update uorb message definitions:
+- Copy and build this package
 ```sh
-cd ~/PX4-Autopilot/msg/tools/
-./uorb_to_ros_msgs.py ~/PX4-Autopilot/msg/ ~/px4_ros_com_ros2/src/px4_msgs/msg/
+./install.sh
 ```
-- Run the ```px4_ros_com``` ROS2 workspace build script in verbose mode to catch any errors:
+- Add to mavros_posix_sitl.launch at/near the bottom of the file
 ```sh
-cd ~/px4_ros_com_ros2/src/px4_ros_com/scripts/
-./build_ros2_workspace.bash --verbose
+<include file="$(find mmWave_ROS1)/launch/main.launch"/>
 ```
-(I had a python import error (pyros-genmsg) that did not show without the --verbose tag)
 
 ### Install QGroundControl
 https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html#ubuntu
@@ -130,7 +90,7 @@ The script builds ROS2 workspace and downloads and installs powerline test setup
 `https://drive.google.com/file/d/1wMf4hJXjVBkhR41Do0fGaT0t_GC8mKW_`. If downloading within the script fails, download from this link manually and install files where the script would.
 
 ```sh
-cd ~/mmWave_ROS2_PX4_Gazebo/
+cd ~/mmWave_ROS1_PX4_Gazebo/
 chmod +x ./install.sh
 ```
 Execute install script (from the script directory). If PX4 and px4_ros_com_ros2 installed in home directory:
@@ -145,11 +105,7 @@ Execute install script (from the script directory). If PX4 and px4_ros_com_ros2 
    cd ~/PX4-Autopilot/
    ```
    ```sh
-   make px4_sitl_rtps gazebo_iris__hca_full_pylon_setup
-   ```
-   or, for empty world (if no additional worlds/models installed):
-   ```sh
-   make px4_sitl_rtps gazebo
+   make px4_sitl_default gazebo_iris
    ```
    
    (syntax: ```make <target> <simulator>_<vehiclemodel>__<world> ```
