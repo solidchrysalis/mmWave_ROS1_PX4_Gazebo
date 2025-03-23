@@ -89,6 +89,12 @@ vi model.sdf
 
 ```
 
+### Install Python Packages for Utils
+
+```sh
+sudo pip3 install pypcd4
+```
+
 ### Install QGroundControl
 https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html#ubuntu
 ```sh
