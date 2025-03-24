@@ -1,11 +1,11 @@
-import open3d 
-import pypcd4
+import open3d as o3d 
 import numpy as np
 import bagreader as bag
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, PointField
 
 def pointcloud_bag(filename):
+    TOPIC = "/lidar_to_mmwave_pcl"
     tstart = None
     tend = None
     type_to_look ="sensor_msgs/PointCloud2"
@@ -18,7 +18,7 @@ def pointcloud_bag(filename):
     
     point_cloud_data = []
     for i in range(len(table_rows)):
-        for topic, msg, t in b.reader.read_messages(topics="/rio/combined_radar_scan_2", start_time=tstart, end_time=tend):
+        for topic, msg, t in b.reader.read_messages(topics=TOPIC, start_time=tstart, end_time=tend):
             points = list(pc2.read_points(msg, field_names=('x', 'y', 'z'), skip_nans=True))
             point_cloud_data.extend(points)
     # print(point_cloud_data)
@@ -34,7 +34,7 @@ def pointcloud_bag(filename):
     print("Saved point cloud to output.pcd")     
 
 def main():
-    pointcloud_bag("../test/rio_log_2025-03-05-18-38-28.bag")
+    pointcloud_bag("./test/2025-03-24-15-47-09.bag")
 
 if __name__ == "__main__":
     main()

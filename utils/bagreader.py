@@ -73,11 +73,11 @@ except ImportError:
     except ImportError:
         print("importlib_resources not found. Install backported importlib_resources through `pip install importlib-resources`")
 
-try:
-    v = Path(version_src).open(encoding = "utf-8").read().splitlines()
-except TypeError:
-    v = Path(str(version_src)).open(encoding = "utf-8").read().splitlines()
-__version__ = v[0].strip()
+#try:
+ #   v = Path(version_src).open(encoding = "utf-8").read().splitlines()
+#except TypeError:
+ #   v = Path(str(version_src)).open(encoding = "utf-8").read().splitlines()
+__version__ = "3.8"
 
 def timeout(func, args=(), timeout_duration=2, default=None, **kwargs):
     """This spwans a thread and runs the given function using the args, kwargs and

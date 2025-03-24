@@ -13,8 +13,6 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  pcl_ros
-  pcl_conversions
 )
 
 ## System dependencies are found with CMake's conventions
@@ -138,8 +136,6 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(lidar_to_mmwave src/lidar_to_mmwave)
-add_executable(img_3d_to_2d_proj src/img_3d_to_2d_proj)
-add_executable(vel_ctrl_vec_pub src/vel_ctrl_vec_pub)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -150,20 +146,12 @@ add_executable(vel_ctrl_vec_pub src/vel_ctrl_vec_pub)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(lidar_to_mmwave ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(img_3d_to_2d_proj ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(vel_ctrl_vec_pub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 ## Specify libraries to link a library or executable target against
  target_link_libraries(lidar_to_mmwave
    ${catkin_LIBRARIES}
- )
-  target_link_libraries(img_3d_to_2d_proj
-   ${catkin_LIBRARIES}
- )
-  target_link_libraries(vel_ctrl_vec_pub
-   ${catkin_LIBRARIES}
- )
+)
 
 #############
 ## Install ##
@@ -181,7 +169,7 @@ add_dependencies(vel_ctrl_vec_pub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
- install(TARGETS lidar_to_mmwave img_3d_to_2d_proj vel_ctrl_vec_pub
+ install(TARGETS lidar_to_mmwave
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
