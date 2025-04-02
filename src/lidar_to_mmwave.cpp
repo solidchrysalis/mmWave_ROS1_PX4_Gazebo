@@ -49,7 +49,7 @@ class LidarToMmwave
 		// Should make a custom message type since BlockLaser returns a PointCloud without 
 		// this info, but i am running low on time
 		float horiz_angle_min = -.261;
-		float horiz_angle_max = -.261;
+		float horiz_angle_max = .261;
 		float ver_angle_min = -1.04;
 		float ver_angle_max = 1.04;
 		float range_max = 10;
@@ -58,6 +58,8 @@ class LidarToMmwave
 		float total_horiz_angle = horiz_angle_max - horiz_angle_min;
 		int num_vert_rays = 30;
 		int num_horiz_rays = 120; 
+		float vert_angle_increment = total_vert_angle / num_vert_rays;
+		float horiz_angle_increment = total_horiz_angle / num_horiz_rays;
 };
 
 double LidarToMmwave::range_value(const geometry_msgs::Point32 point) {
@@ -85,30 +87,31 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	float group_angl = 0;
 	for(int i = 0; i < num_vert_rays-1; i++) {
 		for(int j = 0; j < num_horiz_rays-1; j++) {
-		if(this->range_value(points[i * num_vert_rays + j]) > range_min && this->range_value(points[i * num_vert_rays + j]) < range_max){
+		if(this->range_value(points[i * num_horiz_rays + j]) > range_min && this->range_value(points[i * num_horiz_rays + j]) < range_max){
 			//std::cout << "Object detected, range: " << _msg->ranges[i] << std::endl;
 			if(grouped_previous == 0){	
 				//std::cout << "First beam of object" << std::endl;
 				group_dist += this->range_value(points[i]);
-				group_angl += float(i)*angle_increment - angle_max;
+				group_angl += float(i)*horiz_angle_increment - horiz_angle_max;
 			}
-			// Group object if current and next ray almost same distance
-			if(abs(this->range_value(points[i * num_vert_rays + j + 1]) - this->range_value(points[i * num_vert_rays + j + 1])) < 0.1 ){
+			// Group object if current and next horizontal ray almost same distance
+			if(abs(this->range_value(points[(i * num_horiz_rays + j) + 1]) - this->range_value(points[(i * num_horiz_rays + j) + 1])) < 0.1 ){
 				//std::cout << "Object more than one beam wide" << std::endl;
 				group_dist += this->range_value(points[i * num_vert_rays + j + 1]);
-				group_angl += float(i+1)*angle_increment - angle_max;
+				group_angl += float(i+1)*vert_angle_increment - horiz_angle_max;
 				grouped_previous++;
 			}
-			if (abs(this->range_value(points[(i + 1) * num_vert_rays + j]) - this->range_value(points[(i + 1) * num_vert_rays + j])) < 0.1 ) {
+			// Group object if current and next vertical ray almost same distance
+			if (abs(this->range_value(points[(i + 1) * num_horiz_rays + j]) - this->range_value(points[(i + 1) * num_horiz_rays + j])) < 0.1 ) {
 				group_dist += this->range_value(points[(i + 1) * num_vert_rays + j]);
-				group_angl += float(i+1)*angle_increment - angle_max;
+				group_angl += float(i+1)*horiz_angle_increment - ver_angle_max;
 				grouped_previous++;
 			}
 			else{
 				// add random dropout of points (~95% detection rate)
 				if ( ((rand() % 100) + 1) < 95){
 					//std::cout << "End of object detected, pushing" << std::endl;
-					object_center_dists.push_back(points[i * num_vert_rays + j]);
+					object_center_dists.push_back(points[i * num_horiz_rays + j]);
 					object_center_angls.push_back( group_angl/(grouped_previous+1) );
 				}
 				grouped_previous = 0;
@@ -122,7 +125,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	this->objects_dist = object_center_dists;
 	
 	// angle compared to straight up from drone
-	float shortestDistIdxAngle = float(shortestDistIdx)*angle_increment - angle_max; 
+	//float shortestDistIdxAngle = float(shortestDistIdx)*angle_increment - angle_max; 
 
 
 	// The sensor already has a noise component, so we don't need to add more.
@@ -155,7 +158,13 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	// create PointCloud2 msg
 	//https://github.com/ros-drivers/velodyne/blob/master/velodyne_laserscan/tests/system.cpp
 	auto pcl2_msg = sensor_msgs::PointCloud2();
-	pcl2_msg.header = std_msgs::Headerpoints[i]
+	pcl2_msg.header = std_msgs::Header();
+	pcl2_msg.header.stamp = ros::Time::now();
+	std::string frameID = "map";
+	pcl2_msg.header.frame_id = frameID;
+	pcl2_msg.fields.resize(3);
+	pcl2_msg.fields[0].name = 'x';
+	pcl2_msg.fields[0].offset = 0;
 	pcl2_msg.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
 	pcl2_msg.fields[0].count = 1;
 	pcl2_msg.fields[1].name = 'y';
