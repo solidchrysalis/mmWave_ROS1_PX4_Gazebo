@@ -1,7 +1,8 @@
 #include <ros/ros.h>
 #include <ros/publisher.h>
 #include <ros/subscriber.h>
-#include <sensor_msgs/LaserScan.h>
+#include <geometry_msgs/Point32.h>
+#include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
 
@@ -42,50 +43,63 @@ class LidarToMmwave
 
 		std::vector<float> objects_dist;
 		std::vector<float> objects_angl;
-		void lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& _msg);
+		void lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr& _msg);
+		double range_value(const geometry_msgs::Point32 point);
+
+		// Should make a custom message type since BlockLaser returns a PointCloud without 
+		// this info, but i am running low on time
+		float horiz_angle_min = -.261;
+		float horiz_angle_max = -.261;
+		float ver_angle_min = -1.04;
+		float ver_angle_max = 1.04;
+		float range_max = 10;
+		float range_min = 0;
+		float total_vert_angle = ver_angle_max - ver_angle_min;
+		float total_horiz_angle = horiz_angle_max - horiz_angle_min;
+		int num_vert_rays = 30;
+		int num_horiz_rays = 120; 
 };
 
-
+double LidarToMmwave::range_value(const geometry_msgs::Point32 point) {
+	return std::hypot(point.z, std::hypot(point.x, point.y));
+}
 
 // converts lidar data to pointcloud of detected objects to simulate sparse mmwave
-void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& _msg){
-	float angle_increment = _msg->angle_increment;
-	float angle_min = _msg->angle_min;
-	float angle_max = _msg->angle_max;
-	float range_max = _msg->range_max;
-	float range_min = _msg->range_min;
-	float total_angle = angle_max - angle_min;
-	int num_of_rays = round(total_angle / angle_increment); // 1000
-	
+void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr& _msg){
 	// get shortest dist index
 	int shortestDistIdx = 0;
-	for(int i = 0; i < num_of_rays; i++){
-		if(_msg->ranges[shortestDistIdx] > _msg->ranges[i]){
-			shortestDistIdx = i;
+	std::vector<geometry_msgs::Point32> points = _msg->points;
+	for(int i = 0; i < num_vert_rays; i++){
+		for(int j = 0; j < num_horiz_rays; j++){ 
+			if(this->range_value(points[shortestDistIdx]) > this->range_value(points[i * num_vert_rays + j])){
+				shortestDistIdx = i * num_vert_rays + j;
+			}
 		}
 	}
 
 	// group objects in lidar fov to simulate mmwave readings
 	std::vector<float> object_center_angls;
-	std::vector<float> object_center_dists;
+	std::vector<geometry_msgs::Point32> object_center_dists;
 	int grouped_previous = 0;
 	float group_dist = 0;
 	float group_angl = 0;
-	for(int i = 0; i < num_of_rays-1; i++){
-		if(_msg->ranges[i] > range_min && _msg->ranges[i] < range_max){
+	for(int i = 0; i < num_vert_rays-1; i++) {
+		for(int j = 0; j < num_horiz_rays-1; j++) {
+		if(this->range_value(points[i * num_vert_rays + j]) > range_min && this->range_value(points[i * num_vert_rays + j]) < range_max){
 			//std::cout << "Object detected, range: " << _msg->ranges[i] << std::endl;
 			if(grouped_previous == 0){	
 				//std::cout << "First beam of object" << std::endl;
-				group_dist += _msg->ranges[i];
+				group_dist += this->range_value(points[i]);
 				group_angl += float(i)*angle_increment - angle_max;
 			}
 			// Group object if current and next ray almost same distance
-			if( abs(_msg->ranges[i+1] - _msg->ranges[i]) < 0.1 ){
+			if( abs(this->range_value(points[i + 1]) - this->range_value(points[i])) < 0.1 ){
 				//std::cout << "Object more than one beam wide" << std::endl;
-				group_dist += _msg->ranges[i+1];
+				group_dist += this->range_value(points[i + 1]);
 				group_angl += float(i+1)*angle_increment - angle_max;
 				grouped_previous++;
 			}
+			if if( abs(this->range_value(points[i + 1]) - this->range_value(points[i])) < 0.1 ){
 			else{
 				// add random dropout of points (~95% detection rate)
 				if ( ((rand() % 100) + 1) < 95){
@@ -98,6 +112,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 				group_angl = 0;
 			}
 		}
+		}
 	}
 	this->objects_angl = object_center_angls;
 	this->objects_dist = object_center_dists;
@@ -107,7 +122,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 
 
 	// convert from "spherical" to cartesian
-	std::vector<float> pcl_x;
+	/* std::vector<float> pcl_x;
 	std::vector<float> pcl_y;
 	std::vector<float> pcl_z;
 
@@ -119,7 +134,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 	}
 	seeded = true;
 	// generate noise
-	float amplitude = 0.05;
+	/ float amplitude = 0.05;
 	float noise;
 	// convert to xyz (including noise)
 	for(int i = 0; i<objects_dist.size(); i++){
@@ -129,7 +144,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 		pcl_y.push_back( sin(			0			) * object_center_dists.at(i) 	+ noise*object_center_dists.at(i));
 		noise = -amplitude + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(amplitude-(-amplitude))));
 		pcl_z.push_back( cos(object_center_angls.at(i)) * object_center_dists.at(i) + noise*object_center_dists.at(i));
-	}
+	} */
 
 	// create PointCloud2 msg
 	//https://github.com/ros-drivers/velodyne/blob/master/velodyne_laserscan/tests/system.cpp
@@ -166,9 +181,9 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::LaserScan::ConstPtr& 
 		uint8_t *ptr = pcl2_msg.data.data();
 		for (size_t i = 0; i < objects_dist.size(); i++)
 		{
-			*(reinterpret_cast<float*>(ptr + 0)) = pcl_x.at(i);
-			*(reinterpret_cast<float*>(ptr + 4)) = pcl_y.at(i);
-			*(reinterpret_cast<float*>(ptr + 8)) = pcl_z.at(i);
+			*(reinterpret_cast<float*>(ptr + 0)) = points[i].x;
+			*(reinterpret_cast<float*>(ptr + 4)) = points[i].y;
+			*(reinterpret_cast<float*>(ptr + 8)) = points[i].z;
 			ptr += POINT_STEP;
 		}
 	}
