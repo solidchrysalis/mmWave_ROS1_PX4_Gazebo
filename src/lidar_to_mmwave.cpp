@@ -12,7 +12,7 @@
 #include <iostream>
 #include <chrono>
 #include <ctime>    
-#include <math.h>  
+#include <cmath>  
 #include <limits>
 #include <vector>
 #include <string>
@@ -53,7 +53,7 @@ class LidarToMmwave
 		float ver_angle_min = -1.04;
 		float ver_angle_max = 1.04;
 		float range_max = 10;
-		float range_min = 0;
+		float range_min = 0.2;
 		float total_vert_angle = ver_angle_max - ver_angle_min;
 		float total_horiz_angle = horiz_angle_max - horiz_angle_min;
 		int num_vert_rays = 30;
@@ -63,7 +63,7 @@ class LidarToMmwave
 };
 
 double LidarToMmwave::range_value(const geometry_msgs::Point32 point) {
-	return std::hypot(point.z, std::hypot(point.x, point.y));
+	return sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));;
 }
 
 // converts lidar data to pointcloud of detected objects to simulate sparse mmwave
@@ -71,6 +71,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	// get shortest dist index
 	int shortestDistIdx = 0;
 	std::vector<geometry_msgs::Point32> points = _msg->points;
+
 	for(int i = 0; i < num_vert_rays; i++){
 		for(int j = 0; j < num_horiz_rays; j++){ 
 			if(this->range_value(points[shortestDistIdx]) > this->range_value(points[i * num_vert_rays + j])){
@@ -85,26 +86,31 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	int grouped_previous = 0;
 	float group_dist = 0;
 	float group_angl = 0;
+	float curr_value, next_horiz, vert_horiz;
 	for(int i = 0; i < num_vert_rays-1; i++) {
 		for(int j = 0; j < num_horiz_rays-1; j++) {
 		if(this->range_value(points[i * num_horiz_rays + j]) > range_min && this->range_value(points[i * num_horiz_rays + j]) < range_max){
 			//std::cout << "Object detected, range: " << _msg->ranges[i] << std::endl;
 			if(grouped_previous == 0){	
 				//std::cout << "First beam of object" << std::endl;
-				group_dist += this->range_value(points[i]);
+				group_dist += this->range_value(points[i * num_horiz_rays + j]);
 				group_angl += float(i)*horiz_angle_increment - horiz_angle_max;
 			}
+
+			curr_value = this->range_value(points[(i * num_horiz_rays + j)]);
+			next_horiz = this->range_value(points[(i * num_horiz_rays + j) + 1]);
+			vert_horiz = this->range_value(points[(i + 1) * num_horiz_rays + j]);
 			// Group object if current and next horizontal ray almost same distance
-			if(abs(this->range_value(points[(i * num_horiz_rays + j) + 1]) - this->range_value(points[(i * num_horiz_rays + j) + 1])) < 0.1 ){
+			if(abs(next_horiz - curr_value) < 0.05){
 				//std::cout << "Object more than one beam wide" << std::endl;
 				group_dist += this->range_value(points[i * num_vert_rays + j + 1]);
-				group_angl += float(i+1)*vert_angle_increment - horiz_angle_max;
+				group_angl += float(i+1)*horiz_angle_increment - horiz_angle_max;
 				grouped_previous++;
 			}
 			// Group object if current and next vertical ray almost same distance
-			if (abs(this->range_value(points[(i + 1) * num_horiz_rays + j]) - this->range_value(points[(i + 1) * num_horiz_rays + j])) < 0.1 ) {
+			if (abs(vert_horiz - curr_value) < 0.05 ) {
 				group_dist += this->range_value(points[(i + 1) * num_vert_rays + j]);
-				group_angl += float(i+1)*horiz_angle_increment - ver_angle_max;
+				group_angl += float(i+1)*vert_angle_increment - ver_angle_max;
 				grouped_previous++;
 			}
 			else{

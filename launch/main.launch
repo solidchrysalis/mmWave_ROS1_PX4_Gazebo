@@ -1,7 +1,7 @@
 
 <launch>
         <!-- Publish diagnostics information from low-level MCU outputs -->
-        <node pkg="mmWave_ROS1_PX4_Gazebo" type="lidar_to_mmwave" name="lidar_to_mmwave"/>
+        <node pkg="mmWave_ROS1_PX4_Gazebo" type="lidar_to_mmwave" name="lidar_to_mmwave" output="screen"/>
 
         <!-- Publish wheel odometry from MCU encoder data -->
        <!-- <node pkg="mmWave_ROS1_PX4_Gazebo" type="img_3d_to_2d_proj" name="lol"/>
