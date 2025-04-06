@@ -53,7 +53,7 @@ class LidarToMmwave
 		float ver_angle_min = -1.04;
 		float ver_angle_max = 1.04;
 		float range_max = 10;
-		float range_min = 0.2;
+		float range_min = 0.5;
 		float total_vert_angle = ver_angle_max - ver_angle_min;
 		float total_horiz_angle = horiz_angle_max - horiz_angle_min;
 		int num_vert_rays = 30;
@@ -68,6 +68,7 @@ double LidarToMmwave::range_value(const geometry_msgs::Point32 point) {
 
 // converts lidar data to pointcloud of detected objects to simulate sparse mmwave
 void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr& _msg){
+	ros::Rate rate(5);
 	// get shortest dist index
 	int shortestDistIdx = 0;
 	std::vector<geometry_msgs::Point32> points = _msg->points;
@@ -89,46 +90,21 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	float curr_value, next_horiz, vert_horiz;
 	for(int i = 0; i < num_vert_rays-1; i++) {
 		for(int j = 0; j < num_horiz_rays-1; j++) {
-		if(this->range_value(points[i * num_horiz_rays + j]) > range_min && this->range_value(points[i * num_horiz_rays + j]) < range_max){
-			//std::cout << "Object detected, range: " << _msg->ranges[i] << std::endl;
-			if(grouped_previous == 0){	
-				//std::cout << "First beam of object" << std::endl;
-				group_dist += this->range_value(points[i * num_horiz_rays + j]);
-				group_angl += float(i)*horiz_angle_increment - horiz_angle_max;
+		// if point is within range and if it is above the ground
+		if(this->range_value(points[i * num_horiz_rays + j]) > range_min && this->range_value(points[i * num_horiz_rays + j]) < range_max && points[i * num_horiz_rays + j].y > .2 && range_max){
+			//ROS_INFO("%f", points[i * num_horiz_rays + j].y);
+			// Only sample some points to simulate real life
+			if ( ((rand() % 100) + 1) < 50){
+				//std::cout << "End of object detected, pushing" << std::endl;
+				object_center_dists.push_back(points[i * num_horiz_rays + j]);
 			}
-
-			curr_value = this->range_value(points[(i * num_horiz_rays + j)]);
-			next_horiz = this->range_value(points[(i * num_horiz_rays + j) + 1]);
-			vert_horiz = this->range_value(points[(i + 1) * num_horiz_rays + j]);
-			// Group object if current and next horizontal ray almost same distance
-			if(abs(next_horiz - curr_value) < 0.05){
-				//std::cout << "Object more than one beam wide" << std::endl;
-				group_dist += this->range_value(points[i * num_vert_rays + j + 1]);
-				group_angl += float(i+1)*horiz_angle_increment - horiz_angle_max;
-				grouped_previous++;
 			}
-			// Group object if current and next vertical ray almost same distance
-			if (abs(vert_horiz - curr_value) < 0.05 ) {
-				group_dist += this->range_value(points[(i + 1) * num_vert_rays + j]);
-				group_angl += float(i+1)*vert_angle_increment - ver_angle_max;
-				grouped_previous++;
-			}
-			else{
-				// add random dropout of points (~95% detection rate)
-				if ( ((rand() % 100) + 1) < 95){
-					//std::cout << "End of object detected, pushing" << std::endl;
-					object_center_dists.push_back(points[i * num_horiz_rays + j]);
-					object_center_angls.push_back( group_angl/(grouped_previous+1) );
-				}
-				grouped_previous = 0;
-				group_dist = 0;
-				group_angl = 0;
-			}
-		}
 		}
 	}
-	this->objects_angl = object_center_angls;
+
+	//this->objects_angl = object_center_angls;
 	this->objects_dist = object_center_dists;
+	ROS_INFO("%ld", object_center_dists.size());
 	
 	// angle compared to straight up from drone
 	//float shortestDistIdxAngle = float(shortestDistIdx)*angle_increment - angle_max; 
@@ -204,6 +180,7 @@ void LidarToMmwave::lidar_to_mmwave_pcl(const sensor_msgs::PointCloud::ConstPtr&
 	}
 	// publish PointCloud2 msg
 	this->lidar_to_mmwave_pcl_publisher_.publish(pcl2_msg);
+	rate.sleep();
 }
 
 			

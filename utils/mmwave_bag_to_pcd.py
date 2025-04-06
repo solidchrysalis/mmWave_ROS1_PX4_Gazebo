@@ -34,7 +34,7 @@ def pointcloud_bag(filename):
     print("Saved point cloud to output.pcd")     
 
 def main():
-    pointcloud_bag("./test/2025-03-24-15-47-09.bag")
+    pointcloud_bag("./test/2025-04-05-20-55-39.bag")
 
 if __name__ == "__main__":
     main()
